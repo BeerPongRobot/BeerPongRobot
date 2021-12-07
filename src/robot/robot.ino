@@ -15,7 +15,10 @@ const int pusher_direction_pin = 21;
 
 const int limitPin = SDA;
 
-int state = 0;
+// Define pins that read in X/Y values of joystick and the push button
+const int xPin = A0;
+const int yPin = A1;
+const int pushPin = 13;
 
 // create servo object to control a servo
 //Servo myservo;
@@ -34,6 +37,7 @@ void setup() {
  pinMode(horiz_direction_pin, OUTPUT);
  pinMode(pusher_step_pin, OUTPUT);
  pinMode(pusher_direction_pin, OUTPUT);
+ pinMode(pushPin, INPUT_PULLUP);
 
 // myservo.attach(servo_pin, 600, 2400);
 
@@ -111,6 +115,16 @@ void test_vertical() {
 //  myservo.write(180);
 //}
 
+void test_joystick() {
+  // read in x and y values from the joystick when joystick pressed
+  if(digitalRead(pushPin) == LOW) {
+    int xPos = analogRead(xPin);
+    int yPos = analogRead(yPin);
+    Serial.println(xPos);
+    Serial.println(yPos);
+  }
+}
+
 void test_limit_switch() {
   if(digitalRead(limitPin) == HIGH) {
     Serial.println("PRESS");
@@ -120,10 +134,11 @@ void test_limit_switch() {
 }
 
 void loop() {
-    test_wheels();
-    test_horizontal();
-    test_vertical();
-    test_pusher();
+//    test_wheels();
+//    test_horizontal();
+//    test_vertical();
+//    test_pusher();
+  test_joystick();
 }
 
 //void wait(int ms) {
