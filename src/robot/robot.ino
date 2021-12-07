@@ -20,6 +20,13 @@ const int xPin = A0;
 const int yPin = A1;
 const int pushPin = 13;
 
+// Set the x/y values of the joystick when it is not moved
+const int xCalibrate = 1950;
+const int yCalibrate = 1950;
+
+// The range from the default x/y values at which a move is registered
+const int range = 400; 
+
 // create servo object to control a servo
 //Servo myservo;
 
@@ -94,7 +101,6 @@ void test_horizontal() {
 
 void test_pusher() {
   steps(STEPS_PER_TURN / 2, pusher_step_pin, pusher_direction_pin, 5000);
-  delay(2000);
 }
 
 void test_vertical() {
@@ -133,12 +139,37 @@ void test_limit_switch() {
   delay(5);
 }
 
+void launch_ball() {
+  analogWrite(motorPin, 60);
+  delay(2000);
+  test_pusher();
+  delay(2000);
+  analogWrite(motorPin, 0);
+}
+
+void aim_and_shoot() {
+  int xPos = analogRead(xPin);
+  int yPos = analogRead(yPin);
+
+  if(yPos > yCalibrate + range) {
+    steps(3, horiz_step_pin, horiz_direction_pin, 20000);
+  } else if(yPos < yCalibrate - range) { 
+    steps(-3, horiz_step_pin, horiz_direction_pin, 20000);
+  }
+
+  if(xPos > xCalibrate + range) {
+    steps(3, vert_step_pin, vert_direction_pin, 20000);
+  } else if (xPos < xCalibrate - range) { 
+    steps(-3, vert_step_pin, vert_direction_pin, 20000);
+  }
+
+  if(digitalRead(pushPin) == LOW) {
+    launch_ball();
+  }
+}
+
 void loop() {
-//    test_wheels();
-//    test_horizontal();
-//    test_vertical();
-//    test_pusher();
-  test_joystick();
+  aim_and_shoot();
 }
 
 //void wait(int ms) {
