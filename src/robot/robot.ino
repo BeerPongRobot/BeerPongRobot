@@ -3,6 +3,7 @@
 
 // pins DC motors connected to
 const int motorPin = 15; // TODO check PWM
+int motorSpeed = 40;
 
 const int horiz_step_pin = SCL;
 const int horiz_direction_pin = SDA;
@@ -13,19 +14,21 @@ const int vert_direction_pin = 14;
 const int pusher_step_pin = TX;
 const int pusher_direction_pin = 21;
 
-const int limitPin = SDA;
-
 // Define pins that read in X/Y values of joystick and the push button
 const int xPin = A0;
 const int yPin = A1;
 const int pushPin = 13;
+
+// Define limit switch pin(s)
+const int clockwiseLimitPin = 12;
+const int counterclockwiseLimitPin = 27;
 
 // Set the x/y values of the joystick when it is not moved
 const int xCalibrate = 1950;
 const int yCalibrate = 1950;
 
 // The range from the default x/y values at which a move is registered
-const int range = 400; 
+const int range = 400;
 
 // create servo object to control a servo
 //Servo myservo;
@@ -35,20 +38,20 @@ const int range = 400;
 
 void setup() {
   // put your setup code here, to run once:
- // Set up serial communication
- Serial.begin(9600);
- pinMode(motorPin, OUTPUT);
- pinMode(vert_step_pin, OUTPUT);
- pinMode(vert_direction_pin, OUTPUT);
- pinMode(horiz_step_pin, OUTPUT);
- pinMode(horiz_direction_pin, OUTPUT);
- pinMode(pusher_step_pin, OUTPUT);
- pinMode(pusher_direction_pin, OUTPUT);
- pinMode(pushPin, INPUT_PULLUP);
+  // Set up serial communication
+  Serial.begin(9600);
+  pinMode(motorPin, OUTPUT);
+  pinMode(vert_step_pin, OUTPUT);
+  pinMode(vert_direction_pin, OUTPUT);
+  pinMode(horiz_step_pin, OUTPUT);
+  pinMode(horiz_direction_pin, OUTPUT);
+  pinMode(pusher_step_pin, OUTPUT);
+  pinMode(pusher_direction_pin, OUTPUT);
+  pinMode(pushPin, INPUT_PULLUP);
+  pinMode(clockwiseLimitPin, INPUT_PULLUP);
+  pinMode(counterclockwiseLimitPin, INPUT_PULLUP);
 
-// myservo.attach(servo_pin, 600, 2400);
-
-// limitSwitch.setDebounceTime(50); // set debounce time to 50 milliseconds
+  // myservo.attach(servo_pin, 600, 2400);
 }
 
 // 200 steps for 360 degree
@@ -76,7 +79,7 @@ void steps(int number_of_steps, int step_pin, int direction_pin, int delay_betwe
     move_forward = false;
     number_of_steps = -number_of_steps;
   }
-  
+
   // Generating the steps
   for (int i = 0; i < number_of_steps; i++) {
     step(move_forward, step_pin, direction_pin);
@@ -123,7 +126,7 @@ void test_vertical() {
 
 void test_joystick() {
   // read in x and y values from the joystick when joystick pressed
-  if(digitalRead(pushPin) == LOW) {
+  if (digitalRead(pushPin) == LOW) {
     int xPos = analogRead(xPin);
     int yPos = analogRead(yPin);
     Serial.println(xPos);
@@ -131,39 +134,66 @@ void test_joystick() {
   }
 }
 
-void test_limit_switch() {
-  if(digitalRead(limitPin) == HIGH) {
-    Serial.println("PRESS");
-  }
-
-  delay(5);
-}
+//void test_limit_switch() {
+//  if (digitalRead(limitPin) == HIGH) {
+//    Serial.println("PRESS");
+//  }
+//
+//  delay(50);
+//}
 
 void launch_ball() {
-  analogWrite(motorPin, 60);
+  analogWrite(motorPin, motorSpeed);
   delay(2000);
   test_pusher();
   delay(2000);
   analogWrite(motorPin, 0);
+
+  // TODO update
 }
 
 void aim_and_shoot() {
   int xPos = analogRead(xPin);
   int yPos = analogRead(yPin);
+ 
+  analogWrite(motorPin, motorSpeed);
+  Serial.println(motorSpeed);
 
-  if(yPos > yCalibrate + range) {
-    steps(3, horiz_step_pin, horiz_direction_pin, 20000);
-  } else if(yPos < yCalibrate - range) { 
-    steps(-3, horiz_step_pin, horiz_direction_pin, 20000);
+  // horizontal aiming
+  if (yPos > yCalibrate + range) {
+    // only allow movement if limit switch is not hit
+    if(digitalRead(clockwiseLimitPin) != LOW) {
+      steps(1, horiz_step_pin, horiz_direction_pin, 0);
+    }
+  } else if (yPos < yCalibrate - range) {
+    if(digitalRead(counterclockwiseLimitPin) != LOW) {
+      steps(-1, horiz_step_pin, horiz_direction_pin, 0);
+    }
   }
 
-  if(xPos > xCalibrate + range) {
-    steps(3, vert_step_pin, vert_direction_pin, 20000);
-  } else if (xPos < xCalibrate - range) { 
-    steps(-3, vert_step_pin, vert_direction_pin, 20000);
+  // dc motor speed changing
+  if (xPos < xCalibrate - range) {
+    // cap motor speed
+    if(motorSpeed < 85) {
+      motorSpeed += 1;
+    }
+  } else if (xPos > xCalibrate + range) {
+    // stop motor from going to slow
+    if(motorSpeed > 30) {
+       motorSpeed -=1;
+    }
   }
 
-  if(digitalRead(pushPin) == LOW) {
+  delay(100);
+
+  // vertical aiming deprecated
+//  if (xPos > xCalibrate + range) {
+//    steps(3, vert_step_pin, vert_direction_pin, 20000);
+//  } else if (xPos < xCalibrate - range) {
+//    steps(-3, vert_step_pin, vert_direction_pin, 20000);
+//  }
+
+  if (digitalRead(pushPin) == LOW) {
     launch_ball();
   }
 }
