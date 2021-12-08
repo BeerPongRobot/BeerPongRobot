@@ -5,12 +5,11 @@
 const int motorPin = 15;
 float motorSpeed = 40.0;
 
+// stepper pins
 const int horiz_step_pin = SCL;
 const int horiz_direction_pin = SDA;
-
 const int vert_step_pin = 32;
 const int vert_direction_pin = 14;
-
 const int pusher_step_pin = TX;
 const int pusher_direction_pin = 21;
 
@@ -28,11 +27,15 @@ const int xCalibrate = 1950;
 const int yCalibrate = 1950;
 
 // The range from the default x/y values at which a move is registered
-const int range = 400;
+const int range = 800;
+
+// bool representing if robot is aiming or not. Determines what happens on button press
+bool isAiming = false;
 
 void setup() {
-  // put your setup code here, to run once:
   // Set up serial communication
+
+  // Set up motor and stepper pins
   Serial.begin(9600);
   pinMode(motorPin, OUTPUT);
   pinMode(vert_step_pin, OUTPUT);
@@ -41,7 +44,11 @@ void setup() {
   pinMode(horiz_direction_pin, OUTPUT);
   pinMode(pusher_step_pin, OUTPUT);
   pinMode(pusher_direction_pin, OUTPUT);
+
+  // joystick button pin
   pinMode(pushPin, INPUT_PULLUP);
+
+  // limit switch pins
   pinMode(clockwiseLimitPin, INPUT_PULLUP);
   pinMode(counterclockwiseLimitPin, INPUT_PULLUP);
 }
@@ -94,13 +101,9 @@ void push_ball() {
 }
 
 void launch_ball() {
-  analogWrite(motorPin, motorSpeed);
-  delay(2000);
   push_ball();
   delay(2000);
   analogWrite(motorPin, 0);
-
-  // TODO update
 }
 
 // turn the robot left and right if joystick is moved left/right
@@ -127,32 +130,55 @@ void update_wheel_speed(int xPos) {
     }
   } else if (xPos > xCalibrate + range) {
     // stop motor from going to slow
-    if(motorSpeed > 35) {
+    if(motorSpeed > 40) {
        motorSpeed -=.3;
     }
   }
 }
 
-void aim_and_shoot() {
+// handle button press by launching ball if robot is aiming, and switching between aiming and off states
+void handle_button_press() {
+  Serial.println("Handle");
+  if(digitalRead(pushPin) == LOW) {
+    Serial.println("BUTTON PRESS");
+    if(isAiming) {
+      launch_ball();
+      isAiming = false;
+    } else {
+      isAiming = true;
+    }
+
+    delay(300);
+  }
+}
+
+// aim robot by reading joystick position, and update horizontal location and wheel speed
+void aim_robot() {
   int xPos = analogRead(xPin);
   int yPos = analogRead(yPin);
- 
   set_wheel_speed(motorSpeed);
-
+ 
   horizontal_aim(yPos);
   update_wheel_speed(xPos);
 
   delay(30);
-
-  if (digitalRead(pushPin) == LOW) {
-    launch_ball();
-  }
 }
 
 void loop() {
-  aim_and_shoot();
+  // if robot is in aiming mode, allow it to be controlled
+  if(isAiming) {
+    aim_robot();
+  }
+
+  // either way, check for a button press
+  handle_button_press();
 }
 
+
+
+// EVERYTHING BELOW IS DEPRECATED
+
+// Custom delay to check for button press and switch state in the middle of a delay
 // void wait(int ms) {
 //  int curr = millis();
 //  while (millis() - curr < ms) {
