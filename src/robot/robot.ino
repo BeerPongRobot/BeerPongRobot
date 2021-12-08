@@ -2,8 +2,8 @@
 #include <analogWrite.h>
 
 // pins DC motors connected to
-const int motorPin = 15; // TODO check PWM
-int motorSpeed = 40;
+const int motorPin = 15;
+float motorSpeed = 40.0;
 
 const int horiz_step_pin = SCL;
 const int horiz_direction_pin = SDA;
@@ -30,12 +30,6 @@ const int yCalibrate = 1950;
 // The range from the default x/y values at which a move is registered
 const int range = 400;
 
-// create servo object to control a servo
-//Servo myservo;
-
-// Pin to control the servo
-//const int servo_pin = A5;
-
 void setup() {
   // put your setup code here, to run once:
   // Set up serial communication
@@ -50,13 +44,12 @@ void setup() {
   pinMode(pushPin, INPUT_PULLUP);
   pinMode(clockwiseLimitPin, INPUT_PULLUP);
   pinMode(counterclockwiseLimitPin, INPUT_PULLUP);
-
-  // myservo.attach(servo_pin, 600, 2400);
 }
 
 // 200 steps for 360 degree
 const int STEPS_PER_TURN = 200;
 
+// step a stepper by one step in direction forward dependent on given pins
 void step(bool forward, int step_pin, int direction_pin) {
   // setting the direction
   if (forward == true) {
@@ -70,6 +63,7 @@ void step(bool forward, int step_pin, int direction_pin) {
   digitalWrite(step_pin, LOW);
 }
 
+// step a stepper with given pins by number_of_steps with a given delay after each step
 void steps(int number_of_steps, int step_pin, int direction_pin, int delay_between_step_microsec) {
   bool move_forward = true;
   // Establishing the direction
@@ -88,78 +82,29 @@ void steps(int number_of_steps, int step_pin, int direction_pin, int delay_betwe
   }
 }
 
-void test_wheels() {
-  analogWrite(motorPin, 60);
-  delay(10000);
-  analogWrite(motorPin, 0);
-  delay(2000);
+// Set the wheel speed of the motor
+void set_wheel_speed(float wheelSpeed) {
+  int intSpeed = (int) wheelSpeed;
+  analogWrite(motorPin, intSpeed);
 }
 
-void test_horizontal() {
-  steps(50, horiz_step_pin, horiz_direction_pin, 20000);
-  delay(2000);
-  steps(-50, horiz_step_pin, horiz_direction_pin, 20000);
-  delay(2000);
-}
-
-void test_pusher() {
+// Runs the pusher stepper to push ball into wheels
+void push_ball() {
   steps(STEPS_PER_TURN / 2, pusher_step_pin, pusher_direction_pin, 5000);
 }
-
-void test_vertical() {
-  steps(25, vert_step_pin, vert_direction_pin, 20000);
-  delay(2000);
-  steps(-25, vert_step_pin, vert_direction_pin, 20000);
-  delay(2000);
-}
-
-//void test_servo() {
-//  analogWrite(motorPin, 0);
-//  for(int i = 180; i >= 0; i--) {
-//    myservo.write(i);
-//    delay(15);
-//  }
-//
-//  delay(3000);
-//  myservo.write(180);
-//}
-
-void test_joystick() {
-  // read in x and y values from the joystick when joystick pressed
-  if (digitalRead(pushPin) == LOW) {
-    int xPos = analogRead(xPin);
-    int yPos = analogRead(yPin);
-    Serial.println(xPos);
-    Serial.println(yPos);
-  }
-}
-
-//void test_limit_switch() {
-//  if (digitalRead(limitPin) == HIGH) {
-//    Serial.println("PRESS");
-//  }
-//
-//  delay(50);
-//}
 
 void launch_ball() {
   analogWrite(motorPin, motorSpeed);
   delay(2000);
-  test_pusher();
+  push_ball();
   delay(2000);
   analogWrite(motorPin, 0);
 
   // TODO update
 }
 
-void aim_and_shoot() {
-  int xPos = analogRead(xPin);
-  int yPos = analogRead(yPin);
- 
-  analogWrite(motorPin, motorSpeed);
-  Serial.println(motorSpeed);
-
-  // horizontal aiming
+// turn the robot left and right if joystick is moved left/right
+void horizontal_aim(int yPos) {
   if (yPos > yCalibrate + range) {
     // only allow movement if limit switch is not hit
     if(digitalRead(clockwiseLimitPin) != LOW) {
@@ -170,28 +115,34 @@ void aim_and_shoot() {
       steps(-1, horiz_step_pin, horiz_direction_pin, 0);
     }
   }
+}
 
+// change DC motor speed if xPos is left/right of joystick initial position
+void update_wheel_speed(int xPos) {
   // dc motor speed changing
   if (xPos < xCalibrate - range) {
     // cap motor speed
     if(motorSpeed < 85) {
-      motorSpeed += 1;
+      motorSpeed += .3;
     }
   } else if (xPos > xCalibrate + range) {
     // stop motor from going to slow
-    if(motorSpeed > 30) {
-       motorSpeed -=1;
+    if(motorSpeed > 35) {
+       motorSpeed -=.3;
     }
   }
+}
 
-  delay(100);
+void aim_and_shoot() {
+  int xPos = analogRead(xPin);
+  int yPos = analogRead(yPin);
+ 
+  set_wheel_speed(motorSpeed);
 
-  // vertical aiming deprecated
-//  if (xPos > xCalibrate + range) {
-//    steps(3, vert_step_pin, vert_direction_pin, 20000);
-//  } else if (xPos < xCalibrate - range) {
-//    steps(-3, vert_step_pin, vert_direction_pin, 20000);
-//  }
+  horizontal_aim(yPos);
+  update_wheel_speed(xPos);
+
+  delay(30);
 
   if (digitalRead(pushPin) == LOW) {
     launch_ball();
@@ -202,7 +153,7 @@ void loop() {
   aim_and_shoot();
 }
 
-//void wait(int ms) {
+// void wait(int ms) {
 //  int curr = millis();
 //  while (millis() - curr < ms) {
 //    if(digitalRead(buttonPin) == HIGH) {
@@ -212,3 +163,27 @@ void loop() {
 //    delay(1);
 //  }
 //}
+
+// Control the pusher with a servo
+// DEPRECATED (using a stepper instead of servo)
+
+// void test_servo() {
+//  analogWrite(motorPin, 0);
+//  for(int i = 180; i >= 0; i--) {
+//    myservo.write(i);
+//    delay(15);
+//  }
+//
+//  delay(3000);
+//  myservo.write(180);
+//}
+
+// vertical aim the launcher by running steps when joystick moved up/down
+// DEPRECATED (vertical aiming does not work)
+// void vertical_aim() {
+//  if (xPos > xCalibrate + range) {
+//    steps(3, vert_step_pin, vert_direction_pin, 20000);
+//  } else if (xPos < xCalibrate - range) {
+//    steps(-3, vert_step_pin, vert_direction_pin, 20000);
+//  }
+// }
