@@ -19,8 +19,8 @@ const int yPin = A1;
 const int pushPin = 13;
 
 // Define limit switch pin(s)
-const int clockwiseLimitPin = 27;
-const int counterclockwiseLimitPin = 12;
+const int clockwiseLimitPin = RX;
+const int counterclockwiseLimitPin = MISO;
 
 // Set the x/y values of the joystick when it is not moved
 const int xCalibrate = 1950;
