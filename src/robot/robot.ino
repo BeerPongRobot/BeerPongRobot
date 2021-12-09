@@ -126,12 +126,12 @@ void update_wheel_speed(int xPos) {
   if (xPos < xCalibrate - range) {
     // cap motor speed
     if(motorSpeed < 85) {
-      motorSpeed += .5;
+      motorSpeed += .8;
     }
   } else if (xPos > xCalibrate + range) {
     // stop motor from going to slow
     if(motorSpeed > 40) {
-       motorSpeed -=.5;
+       motorSpeed -=.8;
     }
   }
 }
