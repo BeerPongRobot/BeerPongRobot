@@ -19,8 +19,8 @@ const int yPin = A1;
 const int pushPin = 13;
 
 // Define limit switch pin(s)
-const int clockwiseLimitPin = 12;
-const int counterclockwiseLimitPin = 27;
+const int clockwiseLimitPin = 27;
+const int counterclockwiseLimitPin = 12;
 
 // Set the x/y values of the joystick when it is not moved
 const int xCalibrate = 1950;
@@ -138,7 +138,7 @@ void update_wheel_speed(int xPos) {
 
 // handle button press by launching ball if robot is aiming, and switching between aiming and off states
 void handle_button_press() {
-  Serial.println("Handle");
+  Serial.println("HI");
   if(digitalRead(pushPin) == LOW) {
     Serial.println("BUTTON PRESS");
     if(isAiming) {
